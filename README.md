@@ -1,94 +1,161 @@
 # Codecov GitHub Action
 
-[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-v3-undefined.svg?logo=github&logoColor=white&style=flat)](https://github.com/marketplace/actions/codecov)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-v5-undefined.svg?logo=github&logoColor=white&style=flat)](https://github.com/marketplace/actions/codecov)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fcodecov%2Fcodecov-action.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fcodecov%2Fcodecov-action?ref=badge_shield)
 [![Workflow for Codecov Action](https://github.com/codecov/codecov-action/actions/workflows/main.yml/badge.svg)](https://github.com/codecov/codecov-action/actions/workflows/main.yml)
 ### Easily upload coverage reports to Codecov from GitHub Actions
 
->The latest release of this Action adds support for tokenless uploads from GitHub Actions!
+## v5 Release
+`v5` of the Codecov GitHub Action will use the [Codecov Wrapper](https://github.com/codecov/wrapper) to encapsulate the [CLI](https://github.com/codecov/codecov-cli). This will help ensure that the Action gets updates quicker.
 
-## ⚠️  Deprecation of v1
-**As of February 1, 2022, v1 has been fully sunset and no longer functions**
+### Migration Guide
+The `v5` release also coincides with the opt-out feature for tokens for public repositories. In the `Global Upload Token` section of the settings page of an organization in codecov.io, you can set the ability for Codecov to receive a coverage reports from any source. This will allow contributors or other members of a repository to upload without needing access to the Codecov token. For more details see [how to upload without a token](https://docs.codecov.com/docs/codecov-tokens#uploading-without-a-token).
 
-Due to the [deprecation](https://about.codecov.io/blog/introducing-codecovs-new-uploader/) of the underlying bash uploader,
-the Codecov GitHub Action has released `v2`/`v3` which will use the new [uploader](https://github.com/codecov/uploader). You can learn
-more about our deprecation plan and the new uploader on our [blog](https://about.codecov.io/blog/introducing-codecovs-new-uploader/).
+> [!WARNING]
+> **The following arguments have been changed**
+> - `file` (this has been deprecated in favor of `files`)
+> - `plugin` (this has been deprecated in favor of `plugins`)
 
-We will be restricting any updates to the `v1` Action to security updates and hotfixes.
+The following arguments have been added:
 
-### Migration from `v1` to `v3`
-The `v3` uploader has a few breaking changes for users
-- Multiple fields have not been transferred from the bash uploader or have been deprecated. Notably
-many of the `functionalities` and `gcov_` arguments have been removed. Please check the documentation
-below for the full list.
+- `binary`
+- `gcov_args`
+- `gcov_executable`
+- `gcov_ignore`
+- `gcov_include`
+- `report_type`
+- `skip_validation`
+- `swift_project`
+
+You can see their usage in the `action.yml` [file](https://github.com/codecov/codecov-action/blob/main/action.yml).
+
+## v4 Release
+`v4` of the Codecov GitHub Action will use the [Codecov CLI](https://github.com/codecov/codecov-cli) to upload coverage reports to Codecov.
+
+### Breaking Changes
+- Tokenless uploading is unsupported. However, PRs made from forks to the upstream public repos will support tokenless (e.g. contributors to OSS projects do not need the upstream repo's Codecov token). For details, [see our docs](https://docs.codecov.com/docs/codecov-uploader#supporting-token-less-uploads-for-forks-of-open-source-repos-using-codecov)
+- Various arguments to the Action have been removed
+
+### Dependabot
+- For repositories using `Dependabot`, users will need to ensure that it has access to the Codecov token for PRs from Dependabot to upload coverage. To do this, please add your `CODECOV_TOKEN` as a Dependabot Secret. For more information, see ["Configuring access to private registries for Dependabot."](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-access-to-private-registries-for-dependabot#storing-credentials-for-dependabot-to-use)
+
+`v3` versions and below will not have access to CLI features (e.g. global upload token, ATS).
 
 ## Usage
 
-To integrate Codecov with your Actions pipeline, specify the name of this repository with a tag number (`@v3` is recommended) as a `step` within your `workflow.yml` file.
+To integrate Codecov with your Actions pipeline, specify the name of this repository with a tag number (`@v5` is recommended) as a `step` within your `workflow.yml` file.
 
-If you have a *private repository*, this Action also requires you to [provide an upload token](https://docs.codecov.io/docs/frequently-asked-questions#section-where-is-the-repository-upload-token-found-) from [codecov.io](https://www.codecov.io) (tip: in order to avoid exposing your token, store it as a `secret`). Optionally, you can choose to include up to four additional inputs to customize the upload context. **For public repositories, no token is needed**
+> [!WARNING]
+> In order for the Action to work seamlessly, you will need to have `curl`, `git`, and `gpg` installed on your runner. You will also need to run the [actions/checkout](https://github.com/actions/checkout) before calling the Codecov action.
+
+This Action also requires you to [provide an upload token](https://docs.codecov.io/docs/frequently-asked-questions#section-where-is-the-repository-upload-token-found-) from [codecov.io](https://www.codecov.io) (tip: in order to avoid exposing your token, [store it](https://docs.codecov.com/docs/adding-the-codecov-token#github-actions) as a `secret`).
+
+Currently, the Action will identify linux, macos, and windows runners. However, the Action may misidentify other architectures. The OS can be specified as
+- alpine
+- alpine-arm64
+- linux
+- linux-arm64
+- macos
+- windows
 
 Inside your `.github/workflows/workflow.yml` file:
 
 ```yaml
 steps:
-- uses: actions/checkout@master
-- uses: codecov/codecov-action@v3
+- uses: actions/checkout@main
+- uses: codecov/codecov-action@v5
   with:
-    token: ${{ secrets.CODECOV_TOKEN }}
+    fail_ci_if_error: true # optional (default = false)
     files: ./coverage1.xml,./coverage2.xml # optional
     flags: unittests # optional
     name: codecov-umbrella # optional
-    fail_ci_if_error: true # optional (default = false)
+    token: ${{ secrets.CODECOV_TOKEN }}
     verbose: true # optional (default = false)
 ```
->**Note**: This assumes that you've set your Codecov token inside *Settings > Secrets* as `CODECOV_TOKEN`. If not, you can [get an upload token](https://docs.codecov.io/docs/frequently-asked-questions#section-where-is-the-repository-upload-token-found-) for your specific repo on [codecov.io](https://www.codecov.io). Keep in mind that secrets are *not* available to forks of repositories.
+
+The Codecov token can also be passed in via environment variables:
+
+```yaml
+steps:
+- uses: actions/checkout@main
+- uses: codecov/codecov-action@v5
+  with:
+    fail_ci_if_error: true # optional (default = false)
+    files: ./coverage1.xml,./coverage2.xml # optional
+    flags: unittests # optional
+    name: codecov-umbrella # optional
+    verbose: true # optional (default = false)
+  env:
+    CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+```
+> [!NOTE]
+> This assumes that you've set your Codecov token inside *Settings > Secrets* as `CODECOV_TOKEN`. If not, you can [get an upload token](https://docs.codecov.io/docs/frequently-asked-questions#section-where-is-the-repository-upload-token-found-) for your specific repo on [codecov.io](https://www.codecov.io). Keep in mind that secrets are *not* available to forks of repositories.
+
+### Using OIDC
+For users with [OpenID Connect(OIDC) enabled](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect), the Codecov token is not necessary. You can use OIDC with the `use_oidc` argument as following.
+
+```yaml
+- uses: codecov/codecov-action@v5
+  with:
+    use_oidc: true
+```
+
+Any token supplied will be ignored, as Codecov will default to the OIDC token for verification.
 
 ## Arguments
 
 Codecov's Action supports inputs from the user. These inputs, along with their descriptions and usage contexts, are listed in the table below:
 
-| Input  | Description | Usage |
-| :---:     |     :---:   |    :---:   |
-| `token`  | Used to authorize coverage report uploads  | *Required |
-| `move_coverage_to_trash` | Move discovered coverage reports to the trash | Optional
-| `commit_parent` | The commit SHA of the parent for which you are uploading coverage. If not present, the parent will be determined using the API of your repository provider.  When using the repository provider's API, the parent is determined via finding the closest ancestor to the commit. | Optional
+| Input  | Description | Required |
+| :---       |     :---     |    :---:   |
+| `base_sha` | 'The base SHA to select. This is only used in the "pr-base-picking" run command' | Optional
+| `binary` | The file location of a pre-downloaded version of the CLI. If specified, integrity checking will be bypassed. | Optional
+| `codecov_yml_path` | The location of the codecov.yml file. This is currently ONLY used for automated test selection (https://docs.codecov.com/docs/getting-started-with-ats). Note that for all other cases, the Codecov yaml will need to be located as described here: https://docs.codecov.com/docs/codecov-yaml#can-i-name-the-file-codecovyml | Optional
+| `commit_parent` | SHA (with 40 chars) of what should be the parent of this commit. | Optional
+| `directory` | Folder to search for coverage files. Default to the current working directory | Optional
+| `disable_file_fixes` | Disable file fixes to ignore common lines from coverage (e.g. blank lines or empty brackets). Read more here https://docs.codecov.com/docs/fixing-reports | Optional
+| `disable_search` | Disable search for coverage files. This is helpful when specifying what files you want to upload with the files option. | Optional
+| `disable_safe_directory` | Disable setting safe directory. Set to true to disable. | Optional
+| `disable_telem` | Disable sending telemetry data to Codecov. Set to true to disable. | Optional
 | `dry_run` | Don't upload files to Codecov | Optional
-| `env_vars`  | Environment variables to tag the upload with. Multiple env variables can be separated with commas (e.g. `OS,PYTHON`) | Optional
-| `fail_ci_if_error`  | Specify if CI pipeline should fail when Codecov runs into errors during upload. *Defaults to **false*** | Optional
-| `files`  | Comma-separated paths to the coverage report(s). Negated paths are supported by starting with `!` | Optional
-| `flags`  | Flag the upload to group coverage metrics (unittests, uitests, etc.). Multiple flags are separated by a comma (ui,chrome) | Optional
-| `full_report` | Specify the path of a full Codecov report to re-upload | Optional
-| `functionalities` | Toggle functionalities | Optional
-| -- `network` | Disable uploading the file network | Optional
-| -- `fixes` | Enable file fixes to ignore common lines from coverage | Optional
-| -- `search` | Disable searching for coverage files | Optional
-| `gcov` | Run with gcov support | Optional
+| `env_vars` | Environment variables to tag the upload with (e.g. PYTHON \| OS,PYTHON) | Optional
+| `exclude` | Comma-separated list of folders to exclude from search. | Optional
+| `fail_ci_if_error` | On error, exit with non-zero code | Optional
+| `files` | Comma-separated explicit list of files to upload. These will be added to the coverage files found for upload. If you wish to only upload the specified files, please consider using "disable-search" to disable uploading other files. | Optional
+| `flags` | Comma-separated list of flags to upload to group coverage metrics. | Optional
+| `force` | Only used for empty-upload run command | Optional
+| `git_service` | Override the git_service (e.g. github_enterprise) | Optional
 | `gcov_args` | Extra arguments to pass to gcov | Optional
+| `gcov_executable` | gcov executable to run. Defaults to 'gcov' | Optional
 | `gcov_ignore` | Paths to ignore during gcov gathering | Optional
 | `gcov_include` | Paths to include during gcov gathering | Optional
-| `gcov_executable` | gcov executable to run. Defaults to gcov. | Optional
-| `name`  | Custom defined name for the upload | Optional
-| `network_filter` | Specify a filter on the files listed in the network section of the Codecov report. Useful for upload-specific path fixing | Optional
-| `network_prefix` | Specify a prefix on files listed in the network section of the Codecov report. Useful to help resolve path fixing | Optional
-| `os` | Specify the OS (linux, macos, windows, alpine) | Optional
-| `override_branch` | Specify the branch name | Optional
-| `override_build` | Specify the build number | Optional
-| `override_commit` | Specify the commit SHA | Optional
-| `override_pr` | Specify the pull request number | Optional
-| `override_tag` | Specify the git tag | Optional
-| `root_dir` | Used when not in git/hg project to identify project root directory | Optional
-| `directory` | Directory to search for coverage reports. | Optional
-| `slug` | Specify the slug manually (Enterprise use) | Optional
-| `swift` | Run with swift coverage support | Optional
-| -- `swift_project` | Specify the swift project to speed up coverage conversion | Optional
-| `upstream_proxy` | The upstream http proxy server to connect through | Optional
-| `url` | Change the upload host (Enterprise use) | Optional
-| `verbose` | Specify whether the Codecov output should be verbose | Optional
-| `version` | Specify which version of the Codecov Uploader should be used. Defaults to `latest` | Optional
-| `working-directory` | Directory in which to execute `codecov.sh` | Optional
-| `xtra_args` | Add additional uploader args that may be missing in the Action | Optional
-
+| `handle_no_reports_found` | If no coverage reports are found, do not raise an exception. | Optional
+| `job_code` |  | Optional
+| `name` | Custom defined name of the upload. Visible in the Codecov UI | Optional
+| `network_filter` | Specify a filter on the files listed in the network section of the Codecov report. This will only add files whose path begin with the specified filter. Useful for upload-specific path fixing. | Optional
+| `network_prefix` | Specify a prefix on files listed in the network section of the Codecov report. Useful to help resolve path fixing. | Optional
+| `os` | Override the assumed OS. Options available at cli.codecov.io | Optional
+| `override_branch` | Specify the branch to be displayed with this commit on Codecov | Optional
+| `override_build` | Specify the build number manually | Optional
+| `override_build_url` | The URL of the build where this is running | Optional
+| `override_commit` | Commit SHA (with 40 chars) | Optional
+| `override_pr` | Specify the pull request number manually. Used to override pre-existing CI environment variables. | Optional
+| `plugins` | Comma-separated list of plugins to run. Specify `noop` to turn off all plugins | Optional
+| `report_code` | The code of the report if using local upload. If unsure, leave unset. Read more here https://docs.codecov.com/docs/the-codecov-cli#how-to-use-local-upload | Optional
+| `report_type` | The type of file to upload, coverage by default. Possible values are "testing", "coverage". | Optional
+| `root_dir` | Root folder from which to consider paths on the network section. Defaults to current working directory. | Optional
+| `run_command` | Choose which CLI command to run. Options are "upload-coverage", "empty-upload", "pr-base-picking", "send-notifications". "upload-coverage" is run by default.' | Optional
+| `skip_validation` | Skip integrity checking of the CLI. This is NOT recommended. | Optional
+| `slug` | [Required when using the org token] Set to the owner/repo slug used instead of the private repo token. Only applicable to some Enterprise users. | Optional
+| `swift_project` | Specify the swift project name. Useful for optimization. | Optional
+| `token` | Repository Codecov token. Used to authorize report uploads | Optional
+| `url` | Set to the Codecov instance URl. Used by Dedicated Enterprise Cloud customers. | Optional
+| `use_legacy_upload_endpoint` | Use the legacy upload endpoint. | Optional
+| `use_oidc` | Use OIDC instead of token. This will ignore any token supplied | Optional
+| `use_pypi` | Use the pypi version of the CLI instead of from cli.codecov.io | Optional
+| `verbose` | Enable verbose logging | Optional
+| `version` | Which version of the Codecov CLI to use (defaults to 'latest') | Optional
+| `working-directory` | Directory in which to execute codecov.sh | Optional
 
 ### Example `workflow.yml` with Codecov Action
 
@@ -105,9 +172,9 @@ jobs:
       OS: ${{ matrix.os }}
       PYTHON: '3.10'
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@main
     - name: Setup Python
-      uses: actions/setup-python@master
+      uses: actions/setup-python@main
       with:
         python-version: 3.10
     - name: Generate coverage report
@@ -116,15 +183,15 @@ jobs:
         pip install pytest-cov
         pytest --cov=./ --cov-report=xml
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
         directory: ./coverage/reports/
         env_vars: OS,PYTHON
         fail_ci_if_error: true
         files: ./coverage1.xml,./coverage2.xml,!./cache
         flags: unittests
         name: codecov-umbrella
+        token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
 ```
 ## Contributing
